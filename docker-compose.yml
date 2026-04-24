@@ -16,6 +16,7 @@ services:
     volumes:
       # Cache downloaded model weights between container restarts
       - gigaam_cache:/root/.cache/gigaam
+      - ./.resources:/app/.resources
     deploy:
       resources:
         reservations:

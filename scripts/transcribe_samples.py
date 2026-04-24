@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     base_url = args.url.rstrip("/")
-    samples_dir = Path(args.dir)
+    samples_dir = Path("../" ,args.dir)
     if not samples_dir.exists() or not samples_dir.is_dir():
         print(f"Samples directory not found: {samples_dir}", file=sys.stderr)
         return 2

@@ -44,7 +44,32 @@ stt-translator-service/
 docker compose up --build
 ```
 
+You can override runtime settings without editing `docker-compose.yml`:
+
+```bash
+# Example: force CPU inference
+STT_DEVICE=cpu docker compose up --build
+```
+
 The service will be available at `http://localhost:8000`.
+
+#### Try the bundled sample audio files
+
+The repository includes a `.resources/` folder with a couple of small audio files.
+After the service is running, you can send them to the API.
+
+**Option A (PowerShell, using `curl.exe`):**
+
+```powershell
+curl.exe -X POST http://localhost:8000/transcribe -F "file=@.resources\test_wav.wav;type=audio/wav"
+curl.exe -X POST http://localhost:8000/transcribe -F "file=@.resources\test_mp3.mp3;type=audio/mpeg"
+```
+
+**Option B (Python helper script):**
+
+```bash
+python scripts/transcribe_samples.py --url http://localhost:8000 --dir .resources
+```
 
 ### 2 — Local (Python ≥ 3.11)
 
@@ -55,6 +80,10 @@ pip install -r requirements.txt
 # Start the server (CPU mode for testing without a GPU)
 STT_DEVICE=cpu uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+> Note: on Windows, `gigaam` may not install due to native dependencies.
+> For real transcription, prefer Docker/WSL2 (Linux). The test suite still runs
+> on any platform because it mocks the model.
 
 ---
 

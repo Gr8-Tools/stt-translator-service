@@ -1,4 +1,4 @@
-python-multipart==0.0.22
+python-multipart==0.0.26
 
 # Web framework
 fastapi==0.115.12
@@ -6,13 +6,15 @@ uvicorn[standard]==0.34.0
 
 # Settings management
 pydantic-settings==2.9.1
+python-dotenv==1.0.1
 
-# GigaAM v3 — Sber's speech recognition model
+# GigaAM - Sber's speech recognition model
+# NOTE: pulls native deps (e.g. sentencepiece) and is most reliably installed
+# inside Linux/Docker.
 # Requires PyTorch with CUDA support; install CUDA-enabled torch separately or
 # use the official Docker image.
-gigaam==0.2.0
+gigaam==0.1.0; platform_system == "Linux" and python_version < "3.13"
 
 # Testing
 httpx==0.28.1
 pytest==8.3.5
-pytest-asyncio==0.26.0

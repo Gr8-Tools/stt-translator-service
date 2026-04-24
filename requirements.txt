@@ -1,4 +1,4 @@
-python-multipart==0.0.20
+python-multipart==0.0.22
 
 # Web framework
 fastapi==0.115.12

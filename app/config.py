@@ -3,9 +3,12 @@ from pydantic import ConfigDict
 
 
 class Settings(BaseSettings):
-    # GigaAM model identifier.
-    # Supported values: "v3_rnnt" (e2e RNN-T, default) or "v3_ctc".
-    model_name: str = "v3_rnnt"
+    # Hugging Face repository for the GigaAM model.
+    model_repo: str = "ai-sage/GigaAM-v3"
+
+    # Revision (branch / tag) to load from the repository.
+    # "e2e_rnnt" — E2E RNN-T decoder (default), "v3_ctc" — CTC decoder.
+    model_revision: str = "e2e_rnnt"
 
     # Device for model inference.
     # Use "cuda" for GPU (recommended) or "cpu" for CPU-only environments.

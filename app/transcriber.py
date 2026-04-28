@@ -1,7 +1,7 @@
-"""GigaAM v3 model wrapper.
+"""GigaAM v3 model wrapper (Hugging Face).
 
-Loads the model once at startup and exposes a single ``transcribe`` method
-that accepts a file-like object with raw audio bytes and returns the
+Loads the model once at startup via ``transformers.AutoModel`` and exposes a
+single ``transcribe`` method that accepts raw audio bytes and returns the
 recognised text.
 """
 
@@ -17,19 +17,26 @@ logger = logging.getLogger(__name__)
 
 
 class Transcriber:
-    """Singleton wrapper around the GigaAM v3 e2e_rnnt model."""
+    """Singleton wrapper around the GigaAM v3 model loaded from Hugging Face."""
 
     _instance: "Transcriber | None" = None
 
     def __init__(self) -> None:
-        import gigaam  # type: ignore[import]  # imported lazily to allow mocking in tests
+        from transformers import AutoModel  # type: ignore[import]  # imported lazily to allow mocking in tests
 
         logger.info(
-            "Loading GigaAM model '%s' on device '%s' …",
-            settings.model_name,
+            "Loading GigaAM model '%s' (revision '%s') on device '%s' …",
+            settings.model_repo,
+            settings.model_revision,
             settings.device,
         )
-        self._model = gigaam.load_model(settings.model_name, device=settings.device)
+        self._model = AutoModel.from_pretrained(
+            settings.model_repo,
+            revision=settings.model_revision,
+            trust_remote_code=True,
+        )
+        self._model = self._model.to(settings.device)
+        self._model.eval()
         logger.info("GigaAM model loaded successfully.")
 
     # ------------------------------------------------------------------
@@ -39,7 +46,7 @@ class Transcriber:
     def transcribe(self, audio_bytes: bytes, filename: str = "audio") -> str:
         """Transcribe raw audio bytes and return the recognised text.
 
-        The audio is written to a temporary file so that GigaAM's internal
+        The audio is written to a temporary file so that the model's internal
         audio-loading pipeline can determine the codec from the file extension
         when it is present in *filename*.
         """
@@ -58,6 +65,7 @@ class Transcriber:
     def get_instance(cls) -> "Transcriber":
         if cls._instance is None:
             cls._instance = cls()
+        assert cls._instance is not None
         return cls._instance
 
 

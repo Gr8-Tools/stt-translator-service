@@ -8,14 +8,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Model and device settings
-      STT_MODEL_NAME: ${STT_MODEL_NAME:-v3_rnnt}
+      # Hugging Face model settings
+      STT_MODEL_REPO: ${STT_MODEL_REPO:-ai-sage/GigaAM-v3}
+      STT_MODEL_REVISION: ${STT_MODEL_REVISION:-e2e_rnnt}
       STT_DEVICE: ${STT_DEVICE:-cuda}
       # Maximum accepted audio file size (bytes) — default 50 MB
       STT_MAX_AUDIO_SIZE_BYTES: ${STT_MAX_AUDIO_SIZE_BYTES:-52428800}
     volumes:
       # Cache downloaded model weights between container restarts
-      - gigaam_cache:/root/.cache/gigaam
+      - huggingface_cache:/root/.cache/huggingface
       - ./.resources:/app/.resources
     deploy:
       resources:
@@ -27,4 +28,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  gigaam_cache:
+  huggingface_cache:

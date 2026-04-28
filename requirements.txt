@@ -8,12 +8,12 @@ uvicorn[standard]==0.34.0
 pydantic-settings==2.9.1
 python-dotenv==1.0.1
 
-# GigaAM - Sber's speech recognition model
-# NOTE: pulls native deps (e.g. sentencepiece) and is most reliably installed
-# inside Linux/Docker.
-# Requires PyTorch with CUDA support; install CUDA-enabled torch separately or
-# use the official Docker image.
-gigaam==0.1.0; platform_system == "Linux" and python_version < "3.13"
+# Hugging Face Transformers — used to load the GigaAM-v3 model.
+# The model uses trust_remote_code=True so transformers must be installed.
+# PyTorch with CUDA support must be installed separately (or via the Docker image).
+transformers>=4.40.0
+accelerate>=0.29.0
+huggingface_hub>=0.22.0
 
 # Testing
 httpx==0.28.1

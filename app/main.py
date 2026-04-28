@@ -1,4 +1,4 @@
-"""FastAPI application — Speech-to-Text service backed by GigaAM v3 e2e_rnnt."""
+"""FastAPI application — Speech-to-Text service backed by GigaAM v3 (Hugging Face)."""
 
 from __future__ import annotations
 
@@ -21,7 +21,8 @@ app = FastAPI(
     title="STT Translator Service",
     description=(
         "A simple Speech-to-Text backend that accepts audio files and returns "
-        "the transcribed text using the **GigaAM v3 e2e_rnnt** model running on GPU."
+        "the transcribed text using the **GigaAM v3** model from Hugging Face "
+        "(``ai-sage/GigaAM-v3``) running on GPU."
     ),
     version="1.0.0",
     responses={
@@ -64,7 +65,8 @@ async def transcribe(
     Supported formats: WAV, MP3, OGG, FLAC, AAC.
 
     The model runs on GPU (CUDA) by default; set the ``STT_DEVICE`` environment
-    variable to ``cpu`` to force CPU inference.
+    variable to ``cpu`` to force CPU inference.  The Hugging Face repository and
+    revision can be overridden via ``STT_MODEL_REPO`` and ``STT_MODEL_REVISION``.
     """
     # --- validate content-type -------------------------------------------
     content_type = (file.content_type or "").lower()

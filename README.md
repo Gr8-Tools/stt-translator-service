@@ -1,8 +1,9 @@
 # stt-translator-service
 
 A lightweight Python backend that receives audio files and returns their transcription using
-**[GigaAM v3 e2e\_rnnt](https://github.com/salute-developers/GigaAM)** — Sber's GPU-accelerated
-end-to-end RNN-T speech recognition model.
+**[GigaAM v3](https://huggingface.co/ai-sage/GigaAM-v3)** — a GPU-accelerated end-to-end
+RNN-T / CTC speech recognition model loaded from Hugging Face
+(`ai-sage/GigaAM-v3`, revision `e2e_rnnt`).
 
 ---
 
@@ -12,8 +13,8 @@ end-to-end RNN-T speech recognition model.
 |-------|-----------|
 | Web framework | **FastAPI** |
 | ASGI server | **Uvicorn** |
-| STT model | **GigaAM v3 e2e\_rnnt** |
-| Audio I/O | **ffmpeg** (via GigaAM's internal pipeline) |
+| STT model | **GigaAM v3** (`ai-sage/GigaAM-v3` via 🤗 Transformers) |
+| Audio I/O | **ffmpeg** (via model's internal pipeline) |
 | Containerisation | **Docker** + **NVIDIA Container Toolkit** |
 
 ---
@@ -47,9 +48,15 @@ docker compose up --build
 You can override runtime settings without editing `docker-compose.yml`:
 
 ```bash
+# Example: use the CTC decoder instead of the default RNN-T
+STT_MODEL_REVISION=v3_ctc docker compose up --build
+
 # Example: force CPU inference
 STT_DEVICE=cpu docker compose up --build
 ```
+
+Model weights are downloaded from Hugging Face on the first run and cached in a
+named Docker volume (`huggingface_cache`) so subsequent starts are instant.
 
 The service will be available at `http://localhost:8000`.
 
@@ -81,9 +88,9 @@ pip install -r requirements.txt
 STT_DEVICE=cpu uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-> Note: on Windows, `gigaam` may not install due to native dependencies.
-> For real transcription, prefer Docker/WSL2 (Linux). The test suite still runs
-> on any platform because it mocks the model.
+> **Note:** model weights are downloaded automatically from Hugging Face on first
+> startup and cached in `~/.cache/huggingface`.  
+> Set `HF_HOME` to change the cache directory.
 
 ---
 
@@ -137,7 +144,8 @@ All settings are read from environment variables (prefix `STT_`) or a `.env` fil
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STT_MODEL_NAME` | `v3_rnnt` | GigaAM model variant (`v3_rnnt` or `v3_ctc`) |
+| `STT_MODEL_REPO` | `ai-sage/GigaAM-v3` | Hugging Face repository ID |
+| `STT_MODEL_REVISION` | `e2e_rnnt` | Branch / tag to load (`e2e_rnnt` or `v3_ctc`) |
 | `STT_DEVICE` | `cuda` | PyTorch device (`cuda` or `cpu`) |
 | `STT_MAX_AUDIO_SIZE_BYTES` | `52428800` | Maximum accepted file size (50 MB) |
 
@@ -150,4 +158,4 @@ pip install -r requirements.txt
 pytest tests/ -v
 ```
 
-The test suite mocks the GigaAM model so no GPU or model weights are required.
+The test suite mocks the model so no GPU or model weights are required.

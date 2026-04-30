@@ -30,10 +30,19 @@ class Transcriber:
             settings.model_revision,
             settings.device,
         )
+        # low_cpu_mem_usage=False is required because GigaAM's remote code
+        # (FeatureExtractor / Hydra-instantiated components) creates tensors
+        # directly on CPU during __init__, which conflicts with the default
+        # meta-device initialisation that transformers uses when
+        # low_cpu_mem_usage=True (the default in transformers ≥ 4.40).
+        # NOTE: do NOT pass device_map here — accelerate's dispatch mechanism
+        # also triggers meta-device init and causes the same conflict.
+        # Move the fully-initialised model to the target device afterwards.
         self._model = AutoModel.from_pretrained(
             settings.model_repo,
             revision=settings.model_revision,
             trust_remote_code=True,
+            low_cpu_mem_usage=False,
         )
         self._model = self._model.to(settings.device)
         self._model.eval()

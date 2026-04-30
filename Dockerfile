@@ -1,5 +1,5 @@
 # ── Build stage ────────────────────────────────────────────────────────────
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 AS base
+FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -21,9 +21,18 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
 
 WORKDIR /app
 
-# Install Python dependencies first (better layer caching)
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Re-pin PyTorch + torchaudio to the exact CUDA 12.8 build.
+# Some transitive dependencies (e.g. pyannote.audio) may pull in a different
+# torch variant from PyPI, so we force-reinstall the correct CUDA 12.8 wheels last.
+RUN pip install --no-cache-dir --force-reinstall \
+        torch==2.8.0 \
+        torchaudio==2.8.0 \
+        --index-url https://download.pytorch.org/whl/cu128
+
 
 # Copy application source
 COPY app/ ./app/

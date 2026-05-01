@@ -29,7 +29,10 @@ class Transcriber:
             settings.model_name,
             settings.device,
         )
-        self._model = gigaam.load_model(settings.model_name, device=settings.device)
+        self._model = gigaam.load_model(
+            settings.model_name,
+            device=settings.device
+        )
         logger.info("GigaAM model loaded successfully.")
 
     # ------------------------------------------------------------------

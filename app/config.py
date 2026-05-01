@@ -5,7 +5,11 @@ from pydantic import ConfigDict
 class Settings(BaseSettings):
     # GigaAM model identifier.
     # Supported values: "v3_rnnt" (e2e RNN-T, default) or "v3_ctc".
-    model_name: str = "v3_rnnt"
+    model_name: str = "v3_e2e_rnnt"
+
+    # Enable FP16 inference.
+    fp16_encoder: bool = True
+    use_flash: bool = False
 
     # Device for model inference.
     # Use "cuda" for GPU (recommended) or "cpu" for CPU-only environments.

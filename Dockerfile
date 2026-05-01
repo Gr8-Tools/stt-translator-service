@@ -1,26 +1,22 @@
 # ── Build stage ────────────────────────────────────────────────────────────
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 AS base
+FROM nvidia/cuda:13.2.1-cudnn-runtime-ubuntu24.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3.11 \
-        python3.11-venv \
-        python3-pip \
         ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Use python3.11 as the default python
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
- && update-alternatives --install /usr/bin/pip    pip    /usr/bin/pip3       1
-
 WORKDIR /app
+
+# Fail fast with a clear error if Python is too new for GigaAM deps.
+RUN python3 -c "import sys; v=sys.version_info[:2]; ok=v < (3, 13);\nprint(f'Python {v[0]}.{v[1]} detected');\nraise SystemExit(0 if ok else 'Python >= 3.13 is not supported by GigaAM dependencies yet.')"
 
 # Install Python dependencies first (better layer caching)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application source
 COPY app/ ./app/

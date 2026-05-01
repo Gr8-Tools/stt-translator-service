@@ -41,8 +41,7 @@ class Transcriber:
         self._model = AutoModel.from_pretrained(
             settings.model_repo,
             revision=settings.model_revision,
-            trust_remote_code=True,
-            low_cpu_mem_usage=False,
+            trust_remote_code=True
         )
         self._model = self._model.to(settings.device)
         self._model.eval()

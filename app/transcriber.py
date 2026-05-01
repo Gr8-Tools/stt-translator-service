@@ -9,11 +9,95 @@ from __future__ import annotations
 
 import logging
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _no_meta_device():
+    """Patch ``init_empty_weights`` to a no-op for the duration of the block.
+
+    GigaAM's remote code (``modeling_gigaam.py``) instantiates
+    ``FeatureExtractor`` and other Hydra components that create real CPU tensors
+    inside ``__init__``.  In ``transformers >= 4.40`` (and especially >= 4.57)
+    ``from_pretrained`` may still activate ``accelerate``'s
+    ``init_empty_weights`` context manager even when ``low_cpu_mem_usage=False``
+    is passed, placing the model skeleton on the *meta* device.  When the
+    custom code then creates a normal CPU tensor the two worlds collide and
+    accelerate raises:
+
+        RuntimeError: Tensor on device cpu is not on the expected device meta!
+
+    Replacing ``init_empty_weights`` with a no-op ensures all tensors are
+    allocated normally on CPU; the model is then moved to the target device
+    after ``from_pretrained`` returns.
+    """
+
+    @contextmanager
+    def _noop(*_args, **_kwargs):  # type: ignore[misc]
+        yield
+
+    import importlib  # noqa: PLC0415
+    import torch  # noqa: PLC0415
+
+    # Patch accelerate in all known module locations across versions.
+    accel_modules = []
+    for module_name in (
+        "accelerate",
+        "accelerate.utils.modeling",
+        "accelerate.big_modeling",
+        "accelerate.utils",
+    ):
+        try:
+            accel_modules.append(importlib.import_module(module_name))
+        except ImportError:
+            continue
+
+    # Optionally patch transformers as well (location changed across versions)
+    _tmu = None
+    _orig_tmu = None
+    try:
+        import transformers.modeling_utils as _tmu_mod  # noqa: PLC0415
+        _tmu = _tmu_mod
+        _orig_tmu = getattr(_tmu_mod, "init_empty_weights", None)
+    except ImportError:
+        _tmu_mod = None  # noqa: F841
+
+    accel_originals: dict[object, object] = {}
+    for mod in accel_modules:
+        original = getattr(mod, "init_empty_weights", None)
+        if original is not None:
+            accel_originals[mod] = original
+
+    # Force default device to CPU while loading to avoid meta defaults.
+    _orig_default_device = None
+    if hasattr(torch, "get_default_device") and hasattr(torch, "set_default_device"):
+        try:
+            _orig_default_device = torch.get_default_device()
+            torch.set_default_device("cpu")
+        except Exception:  # pragma: no cover - defensive for old/odd torch builds
+            _orig_default_device = None
+
+    try:
+        for mod in accel_originals:
+            mod.init_empty_weights = _noop  # type: ignore[assignment]
+        if _tmu is not None and _orig_tmu is not None:
+            _tmu.init_empty_weights = _noop  # type: ignore[assignment]
+        yield
+    finally:
+        for mod, original in accel_originals.items():
+            mod.init_empty_weights = original  # type: ignore[assignment]
+        if _tmu is not None and _orig_tmu is not None:
+            _tmu.init_empty_weights = _orig_tmu  # type: ignore[assignment]
+        if _orig_default_device is not None:
+            try:
+                torch.set_default_device(_orig_default_device)
+            except Exception:  # pragma: no cover - defensive restore
+                pass
 
 
 class Transcriber:
@@ -22,7 +106,9 @@ class Transcriber:
     _instance: "Transcriber | None" = None
 
     def __init__(self) -> None:
-        from transformers import AutoModel  # type: ignore[import]  # imported lazily to allow mocking in tests
+        from transformers import AutoModel  # type: ignore[import]
+        import torch  # noqa: PLC0415
+        import torchaudio  # noqa: PLC0415
 
         logger.info(
             "Loading GigaAM model '%s' (revision '%s') on device '%s' …",
@@ -30,19 +116,31 @@ class Transcriber:
             settings.model_revision,
             settings.device,
         )
-        # low_cpu_mem_usage=False is required because GigaAM's remote code
-        # (FeatureExtractor / Hydra-instantiated components) creates tensors
-        # directly on CPU during __init__, which conflicts with the default
-        # meta-device initialisation that transformers uses when
-        # low_cpu_mem_usage=True (the default in transformers ≥ 4.40).
-        # NOTE: do NOT pass device_map here — accelerate's dispatch mechanism
-        # also triggers meta-device init and causes the same conflict.
-        # Move the fully-initialised model to the target device afterwards.
-        self._model = AutoModel.from_pretrained(
-            settings.model_repo,
-            revision=settings.model_revision,
-            trust_remote_code=True
+        logger.info(
+            "Torch %s | Torchaudio %s | CUDA available: %s | device count: %s",
+            torch.__version__,
+            torchaudio.__version__,
+            torch.cuda.is_available(),
+            torch.cuda.device_count() if torch.cuda.is_available() else 0,
         )
+        if settings.device.startswith("cuda") and not torch.cuda.is_available():
+            logger.warning(
+                "STT_DEVICE=%s requested, but CUDA is not available. "
+                "Set STT_DEVICE=cpu or ensure GPU runtime is enabled.",
+                settings.device,
+            )
+        # _no_meta_device() patches init_empty_weights to a no-op so that
+        # GigaAM's Hydra-instantiated components (FeatureExtractor, etc.) can
+        # create real CPU tensors without conflicting with accelerate's
+        # meta-device bookkeeping.  After loading the model is moved to the
+        # requested device explicitly.
+        with _no_meta_device():
+            self._model = AutoModel.from_pretrained(
+                settings.model_repo,
+                revision=settings.model_revision,
+                trust_remote_code=True,
+                low_cpu_mem_usage=False,
+            )
         self._model = self._model.to(settings.device)
         self._model.eval()
         logger.info("GigaAM model loaded successfully.")

@@ -11,6 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3.11 \
         python3.11-venv \
+        python3.11-distutils \
         python3-pip \
         ffmpeg \
     && rm -rf /var/lib/apt/lists/*
@@ -21,13 +22,19 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
 
 WORKDIR /app
 
+# Create a dedicated venv to avoid system-python pip restrictions
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3.11 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
 
-# Re-pin PyTorch + torchaudio to the exact CUDA 12.8 build.
-# Some transitive dependencies (e.g. pyannote.audio) may pull in a different
-# torch variant from PyPI, so we force-reinstall the correct CUDA 12.8 wheels last.
+## Re-pin PyTorch + torchaudio to the exact CUDA 12.8 build.
+## Some transitive dependencies (e.g. pyannote.audio) may pull in a different
+## torch variant from PyPI, so we force-reinstall the correct CUDA 12.8 wheels last.
 RUN pip install --no-cache-dir --force-reinstall \
         torch==2.8.0 \
         torchaudio==2.8.0 \

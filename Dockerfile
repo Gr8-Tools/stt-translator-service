@@ -5,18 +5,25 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y \
+        python3-pip \
+        python3-venv \
+        ffmpeg
+
+RUN python3 --version
+
+ENV VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+RUN python3 -m venv "$VIRTUAL_ENV" \
+    && python -m pip install --no-cache-dir --upgrade pip
 
 WORKDIR /app
 
-# Fail fast with a clear error if Python is too new for GigaAM deps.
-RUN python3 -c "import sys; v=sys.version_info[:2]; ok=v < (3, 13);\nprint(f'Python {v[0]}.{v[1]} detected');\nraise SystemExit(0 if ok else 'Python >= 3.13 is not supported by GigaAM dependencies yet.')"
-
 # Install Python dependencies first (better layer caching)
 COPY requirements.txt .
-RUN python3 -m pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application source
 COPY app/ ./app/

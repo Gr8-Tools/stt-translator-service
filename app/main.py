@@ -21,7 +21,7 @@ app = FastAPI(
     title="STT Translator Service",
     description=(
         "A simple Speech-to-Text backend that accepts audio files and returns "
-        "the transcribed text using the **GigaAM v3 e2e_rnnt** model running on GPU."
+        "the transcribed text using the Hugging Face **GigaAM v3** model."
     ),
     version="1.0.0",
     responses={

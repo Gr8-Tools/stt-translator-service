@@ -25,6 +25,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Cache-bust only the source layer when needed.
+ARG CODE_CACHEBUST
+RUN echo "Code cache bust: $CODE_CACHEBUST"
+
 # Copy application source
 COPY app/ ./app/
 

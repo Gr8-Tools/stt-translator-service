@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.schemas import ErrorResponse, TranscriptionResponse
-from app.transcriber import Transcriber, get_transcriber
+from app.transcriber import MissingHfTokenError, Transcriber, get_transcriber
 
 logging.basicConfig(
     level=logging.INFO,
@@ -98,6 +98,21 @@ async def transcribe(
     logger.info("Transcribing file '%s' (%d bytes) …", filename, len(audio_bytes))
     try:
         text = transcriber.transcribe(audio_bytes, filename=filename)
+    except MissingHfTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        if "Too long wav file" in str(exc):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Audio is too long for short-form transcription. "
+                    "Please use longform transcription or split the audio."
+                ),
+            ) from exc
+        raise
     except Exception as exc:
         logger.exception("Transcription failed: %s", exc)
         raise HTTPException(

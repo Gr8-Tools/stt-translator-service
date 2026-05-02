@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     model_revision: str = "e2e_rnnt"
 
     # Enable FP16 inference on CUDA (recommended for speed/memory).
-    fp16_encoder: bool = True
+    fp16_encoder: bool = False
 
     # Device for model inference.
     # Use "cuda" for GPU (recommended) or "cpu" for CPU-only environments.
@@ -29,6 +29,9 @@ class Settings(BaseSettings):
         "audio/x-flac",
         "audio/aac",
     ]
+
+    # Hugging Face access token (needed for longform segmentation pipeline).
+    hf_token: str | None = None
 
     model_config = ConfigDict(env_prefix="STT_", env_file=".env")
 

@@ -1,26 +1,33 @@
 # ── Build stage ────────────────────────────────────────────────────────────
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 AS base
+FROM nvidia/cuda:13.2.1-cudnn-runtime-ubuntu24.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3.11 \
-        python3.11-venv \
+RUN apt-get update \
+    && apt-get install -y \
         python3-pip \
-        ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+        python3-venv \
+        ffmpeg
 
-# Use python3.11 as the default python
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
- && update-alternatives --install /usr/bin/pip    pip    /usr/bin/pip3       1
+RUN python3 --version
+
+ENV VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+RUN python3 -m venv "$VIRTUAL_ENV" \
+    && python -m pip install --no-cache-dir --upgrade pip
 
 WORKDIR /app
 
 # Install Python dependencies first (better layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Cache-bust only the source layer when needed.
+ARG CODE_CACHEBUST
+RUN echo "Code cache bust: $CODE_CACHEBUST"
 
 # Copy application source
 COPY app/ ./app/

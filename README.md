@@ -1,8 +1,7 @@
 # stt-translator-service
 
 A lightweight Python backend that receives audio files and returns their transcription using
-**[GigaAM v3 e2e\_rnnt](https://github.com/salute-developers/GigaAM)** — Sber's GPU-accelerated
-end-to-end RNN-T speech recognition model.
+**[GigaAM v3](https://huggingface.co/ai-sage/GigaAM-v3)** via Hugging Face Transformers.
 
 ---
 
@@ -12,7 +11,7 @@ end-to-end RNN-T speech recognition model.
 |-------|-----------|
 | Web framework | **FastAPI** |
 | ASGI server | **Uvicorn** |
-| STT model | **GigaAM v3 e2e\_rnnt** |
+| STT model | **GigaAM v3 (Hugging Face)** |
 | Audio I/O | **ffmpeg** (via GigaAM's internal pipeline) |
 | Containerisation | **Docker** + **NVIDIA Container Toolkit** |
 
@@ -44,7 +43,32 @@ stt-translator-service/
 docker compose up --build
 ```
 
+You can override runtime settings without editing `docker-compose.yml`:
+
+```bash
+# Example: force CPU inference
+STT_DEVICE=cpu docker compose up --build
+```
+
 The service will be available at `http://localhost:8000`.
+
+#### Try the bundled sample audio files
+
+The repository includes a `.resources/` folder with a couple of small audio files.
+After the service is running, you can send them to the API.
+
+**Option A (PowerShell, using `curl.exe`):**
+
+```powershell
+curl.exe -X POST http://localhost:8000/transcribe -F "file=@.resources\test_wav.wav;type=audio/wav"
+curl.exe -X POST http://localhost:8000/transcribe -F "file=@.resources\test_mp3.mp3;type=audio/mpeg"
+```
+
+**Option B (Python helper script):**
+
+```bash
+python scripts/transcribe_samples.py --url http://localhost:8000 --dir .resources
+```
 
 ### 2 — Local (Python ≥ 3.11)
 
@@ -55,6 +79,10 @@ pip install -r requirements.txt
 # Start the server (CPU mode for testing without a GPU)
 STT_DEVICE=cpu uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+> Note: on Windows, the Hugging Face model stack may require CUDA-enabled wheels.
+> For real transcription, prefer Docker/WSL2 (Linux). The test suite still runs
+> on any platform because it mocks the model.
 
 ---
 
@@ -108,7 +136,9 @@ All settings are read from environment variables (prefix `STT_`) or a `.env` fil
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STT_MODEL_NAME` | `v3_rnnt` | GigaAM model variant (`v3_rnnt` or `v3_ctc`) |
+| `STT_MODEL_ID` | `ai-sage/GigaAM-v3` | Hugging Face model id |
+| `STT_MODEL_REVISION` | `e2e_rnnt` | Model revision (e.g. `ssl`, `ctc`, `rnnt`, `e2e_ctc`, `e2e_rnnt`) |
+| `STT_FP16_ENCODER` | `true` | Enable FP16 inference on CUDA |
 | `STT_DEVICE` | `cuda` | PyTorch device (`cuda` or `cpu`) |
 | `STT_MAX_AUDIO_SIZE_BYTES` | `52428800` | Maximum accepted file size (50 MB) |
 
@@ -122,3 +152,13 @@ pytest tests/ -v
 ```
 
 The test suite mocks the GigaAM model so no GPU or model weights are required.
+
+---
+
+## Local model runner
+
+A tiny CLI is included for direct transcription without the API:
+
+```bash
+python scripts/transcribe_local.py --file /path/to/audio.wav
+```

@@ -3,19 +3,24 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        CODE_CACHEBUST: ${CODE_CACHEBUST:-10}
     image: stt-translator-service:latest
     container_name: stt-translator-service
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       # Model and device settings
-      STT_MODEL_NAME: "v3_rnnt"
-      STT_DEVICE: "cuda"
+      STT_MODEL_NAME: ${STT_MODEL_NAME:-e2e_rnnt}
+      STT_DEVICE: ${STT_DEVICE:-cuda}
       # Maximum accepted audio file size (bytes) — default 50 MB
-      STT_MAX_AUDIO_SIZE_BYTES: "52428800"
+      STT_MAX_AUDIO_SIZE_BYTES: ${STT_MAX_AUDIO_SIZE_BYTES:-52428800}
     volumes:
       # Cache downloaded model weights between container restarts
       - gigaam_cache:/root/.cache/gigaam
+      - ./.resources:/app/.resources
     deploy:
       resources:
         reservations:

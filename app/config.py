@@ -3,9 +3,12 @@ from pydantic import ConfigDict
 
 
 class Settings(BaseSettings):
-    # GigaAM model identifier.
-    # Supported values: "v3_rnnt" (e2e RNN-T, default) or "v3_ctc".
-    model_name: str = "v3_rnnt"
+    # Hugging Face model identifier and revision.
+    model_id: str = "ai-sage/GigaAM-v3"
+    model_revision: str = "e2e_rnnt"
+
+    # Enable FP16 inference on CUDA (recommended for speed/memory).
+    fp16_encoder: bool = False
 
     # Device for model inference.
     # Use "cuda" for GPU (recommended) or "cpu" for CPU-only environments.
@@ -26,6 +29,9 @@ class Settings(BaseSettings):
         "audio/x-flac",
         "audio/aac",
     ]
+
+    # Hugging Face access token (needed for longform segmentation pipeline).
+    hf_token: str | None = None
 
     model_config = ConfigDict(env_prefix="STT_", env_file=".env")
 

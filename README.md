@@ -88,9 +88,15 @@ STT_DEVICE=cpu uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ## API reference
 
+### Base URL
+
+`http://<host>:8000`
+
 ### `GET /health`
 
 Liveness probe.
+
+**Response 200**
 
 ```json
 {"status": "ok"}
@@ -106,6 +112,10 @@ Transcribe an uploaded audio file.
 |-------|------|-------------|
 | `file` | binary | Audio file (WAV, MP3, OGG, FLAC, AAC) |
 
+**Content types**
+
+`audio/wav`, `audio/x-wav`, `audio/wave`, `audio/mpeg`, `audio/mp3`, `audio/ogg`, `audio/flac`, `audio/x-flac`, `audio/aac`
+
 **Response 200**
 
 ```json
@@ -114,19 +124,46 @@ Transcribe an uploaded audio file.
 
 **Error responses**
 
-| Status | Cause |
-|--------|-------|
-| 400 | Empty file or unsupported content type |
-| 413 | File exceeds 50 MB limit |
-| 422 | Missing `file` field |
-| 500 | Internal transcription error |
+| Status | When it happens | Example |
+|--------|------------------|---------|
+| 400 | Empty file, unsupported content type, missing HF token for longform | `{"detail":"Unsupported content type 'video/mp4'. Allowed types: audio/wav, ..."}` |
+| 413 | File exceeds size limit | `{"detail":"File size 99999999 bytes exceeds the maximum allowed size of 52428800 bytes."}` |
+| 422 | Missing `file` field | FastAPI validation error |
+| 500 | Internal transcription error | `{"detail":"Transcription error: ..."}` |
 
-#### Example (cURL)
+**Examples**
+
+PowerShell (Windows):
+
+```powershell
+curl.exe -X POST http://localhost:8000/transcribe -F "file=@.resources\test_wav.wav;type=audio/wav"
+```
+
+cURL (Linux/macOS):
 
 ```bash
 curl -X POST http://localhost:8000/transcribe \
      -F "file=@/path/to/audio.wav"
 ```
+
+Python (requests):
+
+```python
+import requests
+
+with open("/path/to/audio.mp3", "rb") as f:
+    resp = requests.post(
+        "http://localhost:8000/transcribe",
+        files={"file": ("audio.mp3", f, "audio/mpeg")},
+        timeout=600,
+    )
+print(resp.json())
+```
+
+**Notes**
+
+- Long files may require longform transcription; if HF token is required, set `HF_TOKEN` or `STT_HF_TOKEN`.
+- The service converts non-WAV formats to WAV internally using `ffmpeg`.
 
 ---
 
@@ -154,7 +191,19 @@ HF_HOME=/root/.cache/huggingface
 ```
 
 Run the container once with internet to populate the cache, then keep the
-`hf_cache` volume mounted for offline runs.
+`hf_cache` volume mounted for offline runs. If offline mode is enabled and the
+cache does not contain the model files, startup will fail with a clear error.
+
+**Cache priming options:**
+
+1) Temporarily disable offline flags, start the service once, then stop it:
+
+```bash
+HF_HUB_OFFLINE=0 TRANSFORMERS_OFFLINE=0 docker compose up --build
+```
+
+2) Alternatively, set `STT_MODEL_ID` to a local path that already contains the
+downloaded Hugging Face snapshot.
 
 ---
 

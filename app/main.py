@@ -8,8 +8,9 @@ from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.exceptions import MissingHfTokenError
 from app.schemas import ErrorResponse, TranscriptionResponse
-from app.transcriber import MissingHfTokenError, Transcriber, get_transcriber
+from app.transcriber import Transcriber, get_transcriber
 
 logging.basicConfig(
     level=logging.INFO,

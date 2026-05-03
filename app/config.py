@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # Hugging Face access token (needed for longform segmentation pipeline).
     hf_token: str | None = None
 
-    model_config = ConfigDict(env_prefix="STT_", env_file=".env")
+    model_config = ConfigDict(env_prefix="STT_", env_file=".env", extra="ignore")
 
 
 settings = Settings()

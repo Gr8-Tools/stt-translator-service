@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        CODE_CACHEBUST: ${CODE_CACHEBUST:-10}
+        CODE_CACHEBUST: ${CODE_CACHEBUST:-11}
     image: stt-translator-service:latest
     container_name: stt-translator-service
     ports:

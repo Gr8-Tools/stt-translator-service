@@ -13,13 +13,17 @@ services:
       - .env
     environment:
       # Model and device settings
-      STT_MODEL_NAME: ${STT_MODEL_NAME:-e2e_rnnt}
+      STT_MODEL_REVISION: ${STT_MODEL_REVISION:-e2e_rnnt}
       STT_DEVICE: ${STT_DEVICE:-cuda}
       # Maximum accepted audio file size (bytes) — default 50 MB
       STT_MAX_AUDIO_SIZE_BYTES: ${STT_MAX_AUDIO_SIZE_BYTES:-52428800}
+      # Hugging Face offline/cache settings (see .env)
+      HF_HOME: ${HF_HOME:-/root/.cache/huggingface}
+      HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-0}
+      TRANSFORMERS_OFFLINE: ${TRANSFORMERS_OFFLINE:-0}
     volumes:
       # Cache downloaded model weights between container restarts
-      - gigaam_cache:/root/.cache/gigaam
+      - hf_cache:/root/.cache/huggingface
       - ./.resources:/app/.resources
     deploy:
       resources:
@@ -31,4 +35,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  gigaam_cache:
+  hf_cache:

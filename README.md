@@ -138,9 +138,23 @@ All settings are read from environment variables (prefix `STT_`) or a `.env` fil
 |----------|---------|-------------|
 | `STT_MODEL_ID` | `ai-sage/GigaAM-v3` | Hugging Face model id |
 | `STT_MODEL_REVISION` | `e2e_rnnt` | Model revision (e.g. `ssl`, `ctc`, `rnnt`, `e2e_ctc`, `e2e_rnnt`) |
-| `STT_FP16_ENCODER` | `true` | Enable FP16 inference on CUDA |
+| `STT_FP16_ENCODER` | `false` | Enable FP16 inference on CUDA |
 | `STT_DEVICE` | `cuda` | PyTorch device (`cuda` or `cpu`) |
 | `STT_MAX_AUDIO_SIZE_BYTES` | `52428800` | Maximum accepted file size (50 MB) |
+| `STT_HF_TOKEN` | *(empty)* | Hugging Face token for longform segmentation |
+
+### Offline mode (no internet)
+
+Use `.env.example` as a template. The recommended offline flags are:
+
+```bash
+HF_HUB_OFFLINE=1
+TRANSFORMERS_OFFLINE=1
+HF_HOME=/root/.cache/huggingface
+```
+
+Run the container once with internet to populate the cache, then keep the
+`hf_cache` volume mounted for offline runs.
 
 ---
 
